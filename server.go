@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 type Notification struct {
@@ -80,17 +80,19 @@ func main() {
 			return nil
 		}
 		for _, alert := range notification.Alerts {
-			alertname, ok := alert.Labels["alertname"]
+			title, ok := alert.Annotations["summary"]
 			if !ok {
-				alertname = "Unnamed Alert"
+				title, ok = alert.Labels["alertname"]
+				if !ok {
+					title = "[No Title]"
+				}
 			}
-			summary, ok := alert.Annotations["summary"]
+			description, ok := alert.Annotations["description"]
 			if !ok {
-				summary = "No summary"
+				description = "[No description]"
 			}
 			color := "red"
 			if alert.Status == "resolved" {
-				alertname += " is resolved!"
 				color = "green"
 			}
 			feishuCard := &FeishuCard{
@@ -99,7 +101,7 @@ func main() {
 					Header: FeishuCardHeader{
 						Title: FeishuCardTextElement{
 							Tag:     "plain_text",
-							Content: alertname,
+							Content: title,
 						},
 						Template: color,
 					},
@@ -108,7 +110,7 @@ func main() {
 							Tag: "div",
 							Text: FeishuCardTextElement{
 								Tag:     "plain_text",
-								Content: summary,
+								Content: description,
 							},
 						},
 					},
