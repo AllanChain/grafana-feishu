@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"io/ioutil"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/basicauth"
 )
 
 type Notification struct {
@@ -51,8 +53,18 @@ func main() {
 	app := fiber.New()
 	feishuWebhook := os.Getenv("FEISHU_WEBHOOK")
 	if feishuWebhook == "" {
-		fmt.Println("Please provide FEISHU_WEBHOOK env var")
+		log.Fatal("Please provide FEISHU_WEBHOOK env var")
 		return
+	}
+	webhookAuth := os.Getenv("WEBHOOK_AUTH")
+	if webhookAuth != "" {
+		log.Printf("Enabling basic auth")
+		parts := strings.SplitN(webhookAuth, ":", 2)
+		app.Use(basicauth.New(basicauth.Config{
+			Users: map[string]string{
+				parts[0]: parts[1],
+			},
+		}))
 	}
 
 	app.Post("/", func(c *fiber.Ctx) error {
@@ -65,7 +77,6 @@ func main() {
 			return nil
 		}
 		for _, alert := range notification.Alerts {
-			fmt.Println(alert.Status)
 			alertname, ok := alert.Labels["alertname"]
 			if !ok {
 				alertname = "Unnamed Alert"
@@ -112,7 +123,7 @@ func main() {
 			}
 			defer response.Body.Close()
 			body, _ := ioutil.ReadAll(response.Body)
-			fmt.Println("response Body:", string(body))
+			log.Printf("Response body: %s", string(body))
 		}
 		return c.SendStatus(204)
 	})
