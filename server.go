@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 )
 
@@ -50,12 +51,14 @@ type FeishuCardDivElement struct {
 }
 
 func main() {
-	app := fiber.New()
 	feishuWebhook := os.Getenv("FEISHU_WEBHOOK")
 	if feishuWebhook == "" {
 		log.Fatal("Please provide FEISHU_WEBHOOK env var")
 		return
 	}
+	app := fiber.New()
+	app.Use(logger.New())
+
 	webhookAuth := os.Getenv("WEBHOOK_AUTH")
 	if webhookAuth != "" {
 		log.Printf("Enabling basic auth")
