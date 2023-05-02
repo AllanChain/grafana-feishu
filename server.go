@@ -85,9 +85,14 @@ func main() {
 			if !ok {
 				summary = "No summary"
 			}
+			if alertname == "DatasourceNoData" {
+				summary = "No data in datasource!"
+			}
 			color := "red"
 			if alert.Status == "resolved" {
+				alertname += " is resolved!"
 				color = "green"
+				summary = "Looks good!"
 			}
 			feishuCard := &FeishuCard{
 				MsgType: "interactive",
