@@ -1,0 +1,6 @@
+#!/usr/bin/bash -xe
+if [ -z "$1" ]; then
+  echo "Please provide a tag"
+  exit
+fi
+docker buildx build --platform=linux/amd64,linux/arm/v7 . -t "$1" --push
