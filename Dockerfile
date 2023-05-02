@@ -21,6 +21,7 @@ WORKDIR /
 COPY --from=build /grafana-feishu /grafana-feishu
 
 EXPOSE 2387
-USER nonroot:nonroot
+RUN addgroup -S feishu && adduser -S feishu -G feishu
+USER feishu
 
 ENTRYPOINT ["/grafana-feishu"]
