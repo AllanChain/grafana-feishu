@@ -4,7 +4,7 @@ FROM --platform=$BUILDPLATFORM golang:1.20-alpine AS build
 WORKDIR /app
 
 ENV GO111MODULE=on
-ENV GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=$GOPROXY
 
 COPY go.mod go.sum ./
 RUN go mod download
