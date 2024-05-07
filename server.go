@@ -50,11 +50,15 @@ type FeishuCardDivElement struct {
 	Text FeishuCardTextElement `json:"text"`
 }
 
+var feishuWebhookBase string = "https://open.feishu.cn/open-apis/bot/v2/hook"
+
 func main() {
 	feishuWebhook := os.Getenv("FEISHU_WEBHOOK")
 	if feishuWebhook == "" {
-		log.Fatal("Please provide FEISHU_WEBHOOK env var")
-		return
+		log.Println("FEISHU_WEBHOOK not provided, expecting bot uuid in path")
+	}
+	if os.Getenv("FEISHU_WEBHOOK_BASE") != "" {
+		feishuWebhookBase = os.Getenv("FEISHU_WEBHOOK_BASE")
 	}
 	app := fiber.New()
 	app.Use(logger.New())
@@ -70,7 +74,7 @@ func main() {
 		}))
 	}
 
-	app.Post("/", func(c *fiber.Ctx) error {
+	app.Post("/:botUUID?", func(c *fiber.Ctx) error {
 		c.Accepts("application/json")
 		notification := new(Notification)
 		if err := c.BodyParser(notification); err != nil {
@@ -120,10 +124,13 @@ func main() {
 			if err != nil {
 				return err
 			}
+			feishuWebhook := feishuWebhook
+			if botUUID := c.Params("botUUID"); botUUID != "" {
+				feishuWebhook = feishuWebhookBase + "/" + botUUID
+			}
 			request, err := http.NewRequest("POST", feishuWebhook, bytes.NewBuffer(feishuJson))
 			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-			client := &http.Client{}
-			response, err := client.Do(request)
+			response, err := http.DefaultClient.Do(request)
 			if err != nil {
 				return err
 			}
