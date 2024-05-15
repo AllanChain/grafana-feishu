@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,11 +51,27 @@ type FeishuCardDivElement struct {
 	Text FeishuCardTextElement `json:"text"`
 }
 
+var defaultWebhookBase string = "https://open.feishu.cn/open-apis/bot/v2/hook"
+
 func main() {
-	feishuWebhook := os.Getenv("FEISHU_WEBHOOK")
-	if feishuWebhook == "" {
-		log.Fatal("Please provide FEISHU_WEBHOOK env var")
-		return
+	var feishuWebhookBase string
+	var defaultBotUUID string
+
+	configuredWebhook := os.Getenv("FEISHU_WEBHOOK")
+	if configuredWebhook != "" {
+		re := regexp.MustCompile(`^(.*)/?([-a-z0-9]{36})?$`)
+		matches := re.FindStringSubmatch(configuredWebhook)
+		feishuWebhookBase = matches[1]
+		defaultBotUUID = matches[2]
+	} else {
+		feishuWebhookBase = strings.TrimRight(os.Getenv("FEISHU_WEBHOOK_BASE"), "/")
+		if feishuWebhookBase == "" {
+			feishuWebhookBase = defaultWebhookBase
+		}
+		defaultBotUUID = os.Getenv("FEISHU_WEBHOOK_UUID")
+	}
+	if defaultBotUUID == "" {
+		log.Println("defaultUUID not provided")
 	}
 	app := fiber.New()
 	app.Use(logger.New())
@@ -70,7 +87,7 @@ func main() {
 		}))
 	}
 
-	app.Post("/", func(c *fiber.Ctx) error {
+	app.Post("/:botUUID?", func(c *fiber.Ctx) error {
 		c.Accepts("application/json")
 		notification := new(Notification)
 		if err := c.BodyParser(notification); err != nil {
@@ -120,10 +137,11 @@ func main() {
 			if err != nil {
 				return err
 			}
-			request, err := http.NewRequest("POST", feishuWebhook, bytes.NewBuffer(feishuJson))
+			botUUID := c.Params("botUUID", defaultBotUUID)
+			feishuWebhookURL := feishuWebhookBase + "/" + botUUID
+			request, err := http.NewRequest("POST", feishuWebhookURL, bytes.NewBuffer(feishuJson))
 			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-			client := &http.Client{}
-			response, err := client.Do(request)
+			response, err := http.DefaultClient.Do(request)
 			if err != nil {
 				return err
 			}
